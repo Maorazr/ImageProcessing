@@ -179,7 +179,7 @@ for idx, contour in enumerate(contours):
     cv2.rectangle(large_img_rgb, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Green rectangle
 
     # Crop the original image to this rectangle
-    cropped_img = large_img[y-2:y + h+5, x:x + w]
+    cropped_img = large_img[y:y + h*2, x:x + w*2]
 
     # Convert the cropped image to a PIL Image and resize it
     pil_img = Image.fromarray(cropped_img).resize((28, 28))
