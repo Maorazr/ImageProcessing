@@ -4,7 +4,7 @@ from pre_processing_to_EMNIST import *
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-# from matplotlib.figure import Figure
+from matplotlib.figure import Figure
 from keras import backend as K
 from keras.models import model_from_json
 import warnings
@@ -53,11 +53,7 @@ class GuiThread(threading.Thread):
     def stop(self):
         self.stop_event.set()
 
-
-
 warnings.filterwarnings('ignore')
-
-
 
 def separate_objects(img,seperate_obj_x_thresh):
     ## This function divides binary image to binary images of object based on their contur
@@ -516,13 +512,9 @@ def update_params(param_name, new_value):
 def print_params():
     print(parameters)
 
-
-
 def change_flag():
     global flag
     flag = not flag
-
-
 def live_webcam_stream(parameters):
     global window
     global live
@@ -616,9 +608,6 @@ def live_webcam_stream(parameters):
     # #create button that will stop the main loop and will able us to change the parameters
     # stop_button = tk.Button(window, text="Stop", command=change_flag)
     # stop_button.grid(row=15, column=5)
-
-
-
   #  button = tk.Button(window, text="Update Parameters", command=lambda: update_parameters(parameters))
   #  button.grid(column=2, row=10)
     #connect to my iphone camera and stream the video

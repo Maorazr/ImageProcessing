@@ -2,11 +2,12 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 
+
+
 def crop_interesting_p33art(image):
     # Convert the image to grayscale
     image = np.array(image, dtype=np.uint8)
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
     # Threshold the image to create a binary image
  #   _, thresh = cv2.threshold(image_gray, 20, 255, cv2.THRESH_BINARY)
 
@@ -31,6 +32,7 @@ def crop_interesting_p33art(image):
 
     return image_cropped
 
+
 def crop_interesting_part2(binary_image):
     # Find the contours in the image
     binary_image = np.array(binary_image, dtype=np.uint8)
@@ -52,7 +54,9 @@ def crop_interesting_part2(binary_image):
     image_cropped = binary_image[y:y+h, x:x+w]
     return image_cropped
 
+
 def crop_to_word(binary_image):
+
     binary_image = np.array(binary_image, dtype=np.uint8)
     # Find all contours in the binary image
     contours, _ = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -77,6 +81,7 @@ def crop_to_word(binary_image):
     cropped_image = binary_image[top:bottom, left:right]
     return cropped_image
 
+
 def laplacian_filter(img):
     # Convert the image to grayscale
     #gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -87,6 +92,7 @@ def laplacian_filter(img):
     # Stack the grayscale result to form an RGB image
     result = np.dstack((laplacian, laplacian, laplacian))
     return result
+
 
 def read_image(image_path,thresh):
     # Import the Image module from the PIL package
@@ -177,6 +183,7 @@ def find_closest_square_in_x(temp, x):
     else:
         return None
 
+
 def find_closest_square(groups):
     # Find the closest square to the point (0, 0)
     closest_square = None
@@ -194,6 +201,7 @@ def find_closest_square(groups):
     # Return the closest square to the point (0, 0) in the x-direction
     return temp_i
 
+
 def find_first_column(images):
     for image in images:
         for i in range(len(image[0])):
@@ -203,9 +211,11 @@ def find_first_column(images):
                 return i
     return -1
 
+
 def get_bounding_box_height(cnt):
     x, y, w, h = cv2.boundingRect(cnt)
     return h
+
 
 def squarify(rect_image, x_pad, y_pad):
     a = rect_image.shape[0]
@@ -217,6 +227,7 @@ def squarify(rect_image, x_pad, y_pad):
     img = np.pad(rect_image, padding, mode='constant')
     return np.pad(img, ((y_pad,y_pad),(x_pad,x_pad)), mode='constant')
     # return binary_image_paddnig(img, x_pad, y_pad)
+
 
 def binary_image_paddnig(img,x_pad=3,y_pad=7):
     ### input: binary image
@@ -241,6 +252,7 @@ def binary_image_paddnig(img,x_pad=3,y_pad=7):
 
     return np.pad(img,((padding_y_up,padding_y_down),(padding_x_up,padding_x_down)), mode='constant')
 
+
 def grayscale_and_resize(image, x_pad, y_pad):
     # Convert the image to grayscale
   #  image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -252,6 +264,7 @@ def grayscale_and_resize(image, x_pad, y_pad):
     image_emnist = np.expand_dims(image_normalized, axis=2)
 
     return image_emnist
+
 
 def num_to_letter(let):
 
@@ -298,12 +311,14 @@ def num_to_letter(let):
         let = let
     return let
 
+
 def crop_binary_image(binary_image):
     rows, cols = np.where(binary_image == 1)
     top_row, bottom_row = np.min(rows), np.max(rows)
     left_col, right_col = np.min(cols), np.max(cols)
 
     return binary_image[top_row:bottom_row + 1, left_col:right_col + 1]
+
 
 def pre_process_to_emnist(img_loc,i_dot_thresh, x_pad, y_pad):
     # img_cropped = crop_interesting_part(img_loc, i_dot_thresh)
@@ -314,6 +329,7 @@ def pre_process_to_emnist(img_loc,i_dot_thresh, x_pad, y_pad):
     except:
         img_to_emnist = grayscale_and_resize(img_cropped, x_pad, y_pad)
         return img_to_emnist
+
 
 def crop_interesting_part(image,i_dot_thresh):
         # Find the contours in the image
@@ -429,6 +445,8 @@ def get_frames_from_video(video_path, frame_interval_seconds=3): # just for us, 
 
     return frames
 
+
+
 def to_binary_image(image, T):
     # Convert the image to grayscale if it's not already grayscale
     if len(image.shape) > 2:
@@ -442,6 +460,7 @@ def to_binary_image(image, T):
     cv2.imshow('binary',binary)
     cv2.waitKey(0)
     return binary
+
 
 if __name__ == '__main__':
     fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(6, 6))

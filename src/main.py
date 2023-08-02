@@ -126,4 +126,4 @@ def find_sequence(X, min_samps_words, eps_words):
 
 
 if __name__ == '__main__':
-    main('/Users/maorazriel/PycharmProjects/pythonProject4/src/try.jpeg')
+    main('/Images/try.jpeg')

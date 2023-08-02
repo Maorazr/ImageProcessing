@@ -1,0 +1,16 @@
+letter_0: p
+letter_1: e
+letter_2: a
+letter_3: z
+letter_4: q
+letter_5: r
+letter_6: k
+letter_7: r
+letter_8: b
+letter_9: z
+letter_10: w
+letter_11: a
+letter_12: w
+letter_13: z
+letter_14: n
+letter_15: d

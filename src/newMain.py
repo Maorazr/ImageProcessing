@@ -148,4 +148,4 @@ def main(img_path):
     find_sequence((255 - binary) / 255, min_words, eps_words)
 
 if __name__ == '__main__':
-    main('/Users/maorazriel/PycharmProjects/pythonProject4/src/try.jpeg')
+    main('/Images/try.jpeg')
