@@ -6,7 +6,6 @@ rectangles = []
 selected_indices = []
 
 
-
 def find_rectangle(point, rectangles):
     x, y = point
     for idx, rect in enumerate(rectangles):
@@ -14,7 +13,6 @@ def find_rectangle(point, rectangles):
         if x_min <= x <= x_max and y_min <= y <= y_max:
             return rect, idx
     return None, None
-
 
 
 def click_and_crop(event, x, y, flags, param):
@@ -91,3 +89,30 @@ if key == ord("c"):
     cv2.waitKey(0)
 
 cv2.destroyAllWindows()
+
+
+
+def assign_characters_to_words(word_rects, char_rects):
+    """
+    Assign each character to the rectangle that represent the word that this character is part of.
+    Characters are sorted according to their appropriate place in the word.
+
+    :param word_rects: A list of 4-tuple representing the rectangles that contain words. Each tuple is (x, y, w, h).
+    :param char_rects: A list of 4-tuple representing the rectangles that contain characters. Each tuple is (x, y, w, h).
+    :return: A dictionary where each key is a word rectangle and each value is a list of the character rectangles that belong to that word.
+    """
+    word_to_chars = {word: [] for word in word_rects}
+
+    for char in char_rects:
+        for word in word_rects:
+            # Check if the character rectangle is completely contained within the word rectangle
+            if word[0] <= char[0] and word[1] <= char[1] and word[0] + word[2] >= char[0] + char[2] and word[1] + word[
+                3] >= char[1] + char[3]:
+                word_to_chars[word].append(char)
+                break  # If a character can be assigned to a word, we break the loop
+
+    for word, chars in word_to_chars.items():
+        # Sort the characters by their x-coordinate
+        chars.sort(key=lambda char: char[0])
+
+    return word_to_chars
