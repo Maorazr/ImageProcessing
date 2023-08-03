@@ -27,7 +27,7 @@ def click_and_crop(event, x, y, flags, param):
             cv2.imshow("image", image)
 
 
-image_path = '/Users/maorazriel/PycharmProjects/pythonProject4/Images/try.jpeg'
+image_path = '/Users/maorazriel/PycharmProjects/pythonProject4/Images/img_4.png'
 image = cv2.imread(image_path)
 
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -43,7 +43,7 @@ for contour in contours:
 
 rects = np.array(rects)
 
-clustering = DBSCAN(eps=120, min_samples=1).fit(rects)
+clustering = DBSCAN(eps=60, min_samples=1).fit(rects)
 
 for idx, class_ in enumerate(set(clustering.labels_)):
     if class_ != -1:

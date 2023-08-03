@@ -68,6 +68,7 @@ _, binary_img = cv2.threshold(large_img, 127, 255, cv2.THRESH_BINARY_INV)
 
 # Find contours in the image
 contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
 # For visualization
 large_img_rgb = cv2.cvtColor(large_img, cv2.COLOR_GRAY2RGB)
 
@@ -77,7 +78,7 @@ if not os.path.exists('letters'):
 
 # Open a file to store the labels
 labels_file = open('labels.txt', 'w')
-char_rect = []
+
 # For each contour...
 for idx, contour in enumerate(contours):
     # Get the bounding rectangle
@@ -93,6 +94,7 @@ for idx, contour in enumerate(contours):
 
     # Draw the bounding rectangle on the RGB image
     cv2.rectangle(large_img_rgb, (x, y), (x + w, y + h), (0, 255, 0), 2)  # Green rectangle
+
     # Crop the original image to this rectangle
     cropped_img = large_img[y_start:y_end, x_start:x_end]
 
