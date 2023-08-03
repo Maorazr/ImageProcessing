@@ -176,6 +176,25 @@ def crop_letters_from_image(contours, large_img):
     return dict
 
 
+# def generate_words(letter_to_word, letter_to_char):
+#     # Create a dictionary to hold the letters for each word
+#     word_to_letters = {}
+#     for letter_rect, word_rect in letter_to_word.items():
+#         if word_rect in word_to_letters:
+#             word_to_letters[word_rect].append((letter_rect, letter_to_char[letter_rect]))
+#         else:
+#             word_to_letters[word_rect] = [(letter_rect, letter_to_char[letter_rect])]
+#
+#     # Now sort the letters within each word by their x coordinate
+#     for word_rect, letters in word_to_letters.items():
+#         letters.sort(key=lambda x: x[0][0])
+#
+#     # Concatenate the sorted letters to form words and map the words to their word rectangle
+#     string_to_word = {''.join([letter[1] for letter in letters]): word_rect for word_rect, letters in
+#                       word_to_letters.items()}
+#
+#     return string_to_word
+
 def generate_words(letter_to_word, letter_to_char):
     # Create a dictionary to hold the letters for each word
     word_to_letters = {}
@@ -189,11 +208,11 @@ def generate_words(letter_to_word, letter_to_char):
     for word_rect, letters in word_to_letters.items():
         letters.sort(key=lambda x: x[0][0])
 
-    # Concatenate the sorted letters to form words and map the words to their word rectangle
-    string_to_word = {''.join([letter[1] for letter in letters]): word_rect for word_rect, letters in
+    # Concatenate the sorted letters to form words
+    word_to_string = {word_rect: ''.join([letter[1] for letter in letters]) for word_rect, letters in
                       word_to_letters.items()}
 
-    return string_to_word
+    return word_to_string
 
 
 def find_word_containing_char(word_rects, char_rect):
@@ -221,6 +240,25 @@ def map_rects_to_words(word_rects, letter_rects):
     return rect_to_word
 
 
+def find_matching_rect(word_to_rect, target_string):
+    matching_rects = [rect for rect, word in word_to_rect.items() if word == target_string]
+
+    if not matching_rects:
+        return None  # No matching rectangle found
+
+    # Sort the rectangles by the y-axis in descending order and x-axis in ascending order.
+    # matching_rects.sort(key=lambda rect: (-rect[1], rect[0]))
+
+    return matching_rects[0]  # Return the first rectangle in the sorted list
+
+
+def reverse_dict_order(input_dict):
+    keys = list(input_dict.keys())
+    values = list(input_dict.values())
+    reversed_dict = dict(zip(keys[::-1], values[::-1]))
+    return reversed_dict
+
+
 def gui(image, dict):
     cv2.namedWindow("image")
     cv2.setMouseCallback("image", click_and_crop, param=(image,))
@@ -238,7 +276,7 @@ def gui(image, dict):
         words = text.split()
 
         for word in words:
-            rect = dict[word]
+            rect = find_matching_rect(dict, word)
             x_min, y_min, x_max, y_max = rect
             cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
         cv2.imshow("image", image)
