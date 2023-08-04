@@ -6,9 +6,14 @@ import os
 from PIL import Image, ImageOps
 from torchvision import transforms
 from torch import nn
+from collections import OrderedDict
+from simple_colors import *
+
 
 global_rectangles = []
 selected_indices = []
+rect_to_word = {}
+
 
 class EMNISTCNN(nn.Module):
     def __init__(self, fmaps1, fmaps2, dense, dropout):
@@ -38,17 +43,83 @@ class EMNISTCNN(nn.Module):
 
 model = EMNISTCNN(fmaps1=40, fmaps2=160, dense=200, dropout=0.5)
 
-# Load the pre-trained weights
-checkpoint = torch.load('/Users/maorazriel/PycharmProjects/pythonProject4/src/torch_emnistcnn_over.pt',
-                        map_location=torch.device('cpu'))
+checkpoint = torch.load('models/torch_emnistcnn_latest.pt', map_location=torch.device('cpu'))
 model.load_state_dict(checkpoint)
 
 transform = transforms.Compose([
-    transforms.Grayscale(),  # Convert the image to grayscale
-    transforms.Resize((28, 28)),  # Resize the image to 28x28 pixels
-    transforms.ToTensor(),  # Convert the image to a PyTorch tensor
-    transforms.Normalize((0.5,), (0.5,))  # Normalize the image
+    transforms.Grayscale(),
+    transforms.Resize((28, 28)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
 ])
+
+
+def gui():
+    dict2 = {}
+    large_img = None
+    while True:
+        try:
+            print(green("\nPlease choose an option:"))
+            print("1) Load image")
+            print("2) Annotate by clicking the image")
+            print("3) Annotate by typing the words")
+            print("4) Exit")
+            option = int(input("\nYour choice: "))
+            # other code
+        except ValueError:
+            print(red("Invalid input. Please enter an integer.\n"))
+            continue
+
+        if option == 1:
+            if option == 1:
+                contours, large_img = openImageFindContours()
+
+                if contours is None or large_img is None:
+                    continue
+
+                letter_rects = find_letters_rect(contours)
+                word_rects = find_word_rects(letter_rects)
+                letter_to_word = map_rects_to_words(word_rects, letter_rects)
+                dict = crop_letters_from_image(contours, large_img)
+                dict2 = generate_words(letter_to_word, dict)
+                dict2 = OrderedDict(reversed(list(dict2.items())))
+
+        elif option == 2:
+            if large_img is not None and dict2 is not None:
+                cv2.namedWindow("image")
+                cv2.setMouseCallback("image", click_and_crop, param=[large_img, dict2])
+                cv2.imshow("image", large_img)
+                print("Press any key to continue...")
+                cv2.waitKey(0)
+            else:
+                print(red("\nYou need to load an image first."))
+        elif option == 3:
+            if large_img is not None and dict2 is not None:
+                print(green("Enter your text:"))
+                text = input()
+                words = text.split()
+
+                for word in words:
+                    rect = find_matching_rect(dict2, word)
+                    if rect is not None:
+                        x_min, y_min, x_max, y_max = rect
+                        cv2.rectangle(large_img, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+
+                        if rect in dict2:
+                            del dict2[rect]
+                    else:
+                        print(red(f"\nNo rectangle found for word: {word}"))
+
+                cv2.imshow("image", large_img)
+                print("Press any key to continue...")
+                cv2.waitKey(0)
+            else:
+                print(red("\nYou need to load an image first."))
+        elif option == 4:
+            cv2.destroyAllWindows()
+            break
+        else:
+            print(red("\nInvalid option, please try again."))
 
 
 def get_rectangle_from_word(word_to_rect, target_word):
@@ -59,29 +130,40 @@ def get_rectangle_from_word(word_to_rect, target_word):
 
 
 def assign_characters_to_words(word_rects, char_rects):
-    char_to_word = {}  # dictionary with char as key and corresponding word as value
+    char_to_word = {}
 
     for char in char_rects:
         for word in word_rects:
-            # Check if the character rectangle is completely contained within the word rectangle
+
             if word[0] <= char[0] and word[1] <= char[1] and word[0] + word[2] >= char[0] + char[2] and \
                     word[1] + word[3] >= char[1] + char[3]:
                 char_to_word[tuple(char)] = tuple(word)
-                break  # If a character can be assigned to a word, we break the loop
+                break
 
     return char_to_word
 
 
 def openImageFindContours():
-    image_file_name = input("Please enter the image file name: ")
-    large_img = cv2.imread(f'/Users/maorazriel/PycharmProjects/pythonProject4/Images/{image_file_name}',
-                           cv2.IMREAD_GRAYSCALE)
+    image_file_name = input("\nPlease enter the image file name: ")
+    image_path = f'/Users/maorazriel/PycharmProjects/pythonProject4/Images/{image_file_name}'
 
-    _, binary_img = cv2.threshold(large_img, 127, 255, cv2.THRESH_BINARY_INV)
 
-    # Find contours in the image
+    if not os.path.exists(image_path):
+        print(red(f"The file {image_file_name} does not exist.\n"))
+        return None, None
+
+    large_img_gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    if large_img_gray is None:
+        print(red(f"The file {image_file_name} could not be opened.\n"))
+        return None, None
+
+    large_img = cv2.cvtColor(large_img_gray, cv2.COLOR_GRAY2BGR)
+
+    _, binary_img = cv2.threshold(large_img_gray, 127, 255, cv2.THRESH_BINARY_INV)
+
     contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return contours, large_img
+
 
 
 def find_letters_rect(contours):
@@ -110,9 +192,7 @@ def find_word_rects(letter_rects):
     return rectangles
 
 
-
 def find_rectangle(point):
-
     rectangles = global_rectangles
     x, y = point
     for idx, rect in enumerate(rectangles):
@@ -125,6 +205,7 @@ def find_rectangle(point):
 def click_and_crop(event, x, y, flags, param):
     global global_rectangles, selected_indices
     image = param[0]
+    dict2 = param[1]
     if event == cv2.EVENT_LBUTTONDOWN:
         rect, rect_index = find_rectangle((x, y))
 
@@ -132,6 +213,10 @@ def click_and_crop(event, x, y, flags, param):
             selected_indices.append(rect_index)
             cv2.rectangle(image, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 2)
             cv2.imshow("image", image)
+
+            # remove the annotated rectangle from dict2
+            if rect in dict2:
+                del dict2[rect]
 
 
 def combine_letters_into_words(word_to_chars, char_to_image):
@@ -146,11 +231,9 @@ def crop_letters_from_image(contours, large_img):
     dict = {}
     letters = []
     for idx, contour in enumerate(contours):
-        # Get the bounding rectangle
         x, y, w, h = cv2.boundingRect(contour)
         rect = [x, y, x + w, y + h]
         letters.append(rect)
-        print(x, y, w, h)
         margin = 1
 
         x_start = max(0, x - margin)
@@ -158,14 +241,13 @@ def crop_letters_from_image(contours, large_img):
         x_end = min(large_img.shape[1], x + w + margin)
         y_end = min(large_img.shape[0], y + h + margin)
         cropped_img = large_img[y_start:y_end, x_start:x_end]
-        # cropped_img = cropped_img.astype(np.uint8)
+
         pil_img = Image.fromarray(cropped_img).resize((28, 28))
         pil_img = ImageOps.invert(pil_img)
         pil_img.save('letters/letter_{}.png'.format(idx))
         img = transform(pil_img).unsqueeze(0)
         model.eval()
 
-        # Run the model
         with torch.no_grad():
             output = model(img)
 
@@ -176,27 +258,7 @@ def crop_letters_from_image(contours, large_img):
     return dict
 
 
-# def generate_words(letter_to_word, letter_to_char):
-#     # Create a dictionary to hold the letters for each word
-#     word_to_letters = {}
-#     for letter_rect, word_rect in letter_to_word.items():
-#         if word_rect in word_to_letters:
-#             word_to_letters[word_rect].append((letter_rect, letter_to_char[letter_rect]))
-#         else:
-#             word_to_letters[word_rect] = [(letter_rect, letter_to_char[letter_rect])]
-#
-#     # Now sort the letters within each word by their x coordinate
-#     for word_rect, letters in word_to_letters.items():
-#         letters.sort(key=lambda x: x[0][0])
-#
-#     # Concatenate the sorted letters to form words and map the words to their word rectangle
-#     string_to_word = {''.join([letter[1] for letter in letters]): word_rect for word_rect, letters in
-#                       word_to_letters.items()}
-#
-#     return string_to_word
-
 def generate_words(letter_to_word, letter_to_char):
-    # Create a dictionary to hold the letters for each word
     word_to_letters = {}
     for letter_rect, word_rect in letter_to_word.items():
         if word_rect in word_to_letters:
@@ -204,11 +266,9 @@ def generate_words(letter_to_word, letter_to_char):
         else:
             word_to_letters[word_rect] = [(letter_rect, letter_to_char[letter_rect])]
 
-    # Now sort the letters within each word by their x coordinate
     for word_rect, letters in word_to_letters.items():
         letters.sort(key=lambda x: x[0][0])
 
-    # Concatenate the sorted letters to form words
     word_to_string = {word_rect: ''.join([letter[1] for letter in letters]) for word_rect, letters in
                       word_to_letters.items()}
 
@@ -220,13 +280,11 @@ def find_word_containing_char(word_rects, char_rect):
     for word_rect in word_rects:
         if word_rect[0] <= char_rect[0] and word_rect[1] <= char_rect[1] and \
                 word_rect[2] >= char_rect[2] and word_rect[3] >= char_rect[3]:
-            # Calculate the Euclidean distance from the center of the char_rect to the center of the word_rect
             word_center = ((word_rect[2] - word_rect[0]) / 2, (word_rect[3] - word_rect[1]) / 2)
             char_center = ((char_rect[2] - char_rect[0]) / 2, (char_rect[3] - char_rect[1]) / 2)
             distance = ((word_center[0] - char_center[0]) ** 2 + (word_center[1] - char_center[1]) ** 2) ** 0.5
             word_rect_distances.append((distance, word_rect))
 
-    # Sort the distances in ascending order and return the word_rect with the smallest distance
     word_rect_distances.sort()
     return word_rect_distances[0][1] if word_rect_distances else None
 
@@ -244,12 +302,9 @@ def find_matching_rect(word_to_rect, target_string):
     matching_rects = [rect for rect, word in word_to_rect.items() if word == target_string]
 
     if not matching_rects:
-        return None  # No matching rectangle found
+        return None
 
-    # Sort the rectangles by the y-axis in descending order and x-axis in ascending order.
-    # matching_rects.sort(key=lambda rect: (-rect[1], rect[0]))
-
-    return matching_rects[0]  # Return the first rectangle in the sorted list
+    return matching_rects[0]
 
 
 def reverse_dict_order(input_dict):
@@ -257,29 +312,3 @@ def reverse_dict_order(input_dict):
     values = list(input_dict.values())
     reversed_dict = dict(zip(keys[::-1], values[::-1]))
     return reversed_dict
-
-
-def gui(image, dict):
-    cv2.namedWindow("image")
-    cv2.setMouseCallback("image", click_and_crop, param=(image,))
-
-    while True:
-        cv2.imshow("image", image)
-        key = cv2.waitKey(1) & 0xFF
-
-        if key == ord("c"):  # if the 'c' key is pressed, break from the loop
-            break
-
-    if key == ord("c"):
-        print("Enter your text:")
-        text = input()
-        words = text.split()
-
-        for word in words:
-            rect = find_matching_rect(dict, word)
-            x_min, y_min, x_max, y_max = rect
-            cv2.rectangle(image, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-        cv2.imshow("image", image)
-        cv2.waitKey(0)
-
-    cv2.destroyAllWindows()
