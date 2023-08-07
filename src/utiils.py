@@ -9,10 +9,15 @@ from torch import nn
 from collections import OrderedDict
 from simple_colors import *
 
-
 global_rectangles = []
 selected_indices = []
 rect_to_word = {}
+rect_to_position = {}
+
+current_status = {
+    'line': 0,
+    'position': 0
+}
 
 
 class EMNISTCNN(nn.Module):
@@ -57,6 +62,7 @@ transform = transforms.Compose([
 def gui():
     dict2 = {}
     large_img = None
+    global rect_to_position
     while True:
         try:
             print(green("\nPlease choose an option:"))
@@ -76,9 +82,10 @@ def gui():
 
                 if contours is None or large_img is None:
                     continue
-
                 letter_rects = find_letters_rect(contours)
                 word_rects = find_word_rects(letter_rects)
+                rect_to_position = map_rectangles_to_lines_and_positions(word_rects)
+
                 letter_to_word = map_rects_to_words(word_rects, letter_rects)
                 dict = crop_letters_from_image(contours, large_img)
                 dict2 = generate_words(letter_to_word, dict)
@@ -147,7 +154,6 @@ def openImageFindContours():
     image_file_name = input("\nPlease enter the image file name: ")
     image_path = f'/Users/maorazriel/PycharmProjects/pythonProject4/Images/{image_file_name}'
 
-
     if not os.path.exists(image_path):
         print(red(f"The file {image_file_name} does not exist.\n"))
         return None, None
@@ -163,7 +169,6 @@ def openImageFindContours():
 
     contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     return contours, large_img
-
 
 
 def find_letters_rect(contours):
@@ -203,18 +208,19 @@ def find_rectangle(point):
 
 
 def click_and_crop(event, x, y, flags, param):
-    global global_rectangles, selected_indices
+    global global_rectangles, selected_indices, current_status
     image = param[0]
     dict2 = param[1]
     if event == cv2.EVENT_LBUTTONDOWN:
         rect, rect_index = find_rectangle((x, y))
 
         if rect is not None and rect_index not in selected_indices:
+            current_status = rect_to_position[rect]
+
             selected_indices.append(rect_index)
             cv2.rectangle(image, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 2)
             cv2.imshow("image", image)
 
-            # remove the annotated rectangle from dict2
             if rect in dict2:
                 del dict2[rect]
 
@@ -301,10 +307,16 @@ def map_rects_to_words(word_rects, letter_rects):
 def find_matching_rect(word_to_rect, target_string):
     matching_rects = [rect for rect, word in word_to_rect.items() if word == target_string]
 
-    if not matching_rects:
-        return None
+    for rect in matching_rects:
+        position_info = rect_to_position.get(rect, {})
+        line_num = position_info.get('line', 0)
+        pos_num = position_info.get('position', 0)
 
-    return matching_rects[0]
+        if line_num >= current_status['line']:
+            if line_num > current_status['line'] or pos_num > current_status['position']:
+                return rect
+
+    return None
 
 
 def reverse_dict_order(input_dict):
@@ -312,3 +324,30 @@ def reverse_dict_order(input_dict):
     values = list(input_dict.values())
     reversed_dict = dict(zip(keys[::-1], values[::-1]))
     return reversed_dict
+
+
+def map_rectangles_to_lines_and_positions(rectangles):
+    lines = {}
+
+    rectangles.sort(key=lambda x: x[1])
+    current_line = 1
+    current_y = rectangles[0][1]
+    current_line_rectangles = []
+    for rect in rectangles:
+        if abs(rect[1] - current_y) < 30:
+            current_line_rectangles.append(rect)
+        else:
+            lines[current_y] = sorted(current_line_rectangles,
+                                      key=lambda x: x[0])
+            current_y = rect[1]
+            current_line_rectangles = [rect]
+            current_line += 1
+    if current_line_rectangles:
+        lines[current_y] = sorted(current_line_rectangles, key=lambda x: x[0])
+
+    result = {}
+    for line_index, line_rectangles in enumerate(lines.values(), start=1):
+        for position, rect in enumerate(line_rectangles, start=1):
+            result[tuple(rect)] = {'line': line_index, 'position': position}
+
+    return result
